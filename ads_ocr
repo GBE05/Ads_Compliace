@@ -1,0 +1,50 @@
+#cd เข้าพาธ  n8n
+#source ocr-env/bin/activate
+#cd เข้าพาธ typhoon_ocr
+#uvicorn ocr_main:app --host 0.0.0.0 --port 8118 --reload
+
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+import os
+from typhoon_ocr import ocr_document
+
+app = FastAPI()
+
+# 🔐 API KEY ตั้งค่าทั่วไป
+TYPHOON_API_KEY = "sk-LeVrQgRVU7ZlPcUMihmohXqum6pTfZWTP7qXJmirvWN19Bdf"
+os.environ['TYPHOON_OCR_API_KEY'] = TYPHOON_API_KEY
+
+# 📁 Path ที่เก็บรูป
+FOLDER_PATH = "/home/gb/n8n/ads_testing"
+
+# ✅ 1. List ไฟล์ในโฟลเดอร์
+@app.get("/list-folder")
+def list_folder():
+    if not os.path.isdir(FOLDER_PATH):
+        raise HTTPException(status_code=404, detail="❌ Folder not found")
+
+    files = [f for f in os.listdir(FOLDER_PATH)
+             if os.path.isfile(os.path.join(FOLDER_PATH, f))]
+
+    return {"folder": FOLDER_PATH, "total": len(files), "files": files}
+
+# ✅ 2. OCR ทีละไฟล์ด้วย filename
+@app.post("/ocr-single-file")
+def ocr_single_file(filename: str):
+    file_path = os.path.join(FOLDER_PATH, filename)
+
+    if not os.path.isfile(file_path):
+        raise HTTPException(status_code=404, detail="❌ File not found")
+
+    try:
+        text = ocr_document(file_path)
+        return {"filename": filename, "text": text}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+# ใช้กับanalyze file 
+@app.get("/file")
+def get_file(filename: str):
+    file_path = os.path.join(FOLDER_PATH, filename)
+    if not os.path.isfile(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(file_path, media_type="image/jpeg")
