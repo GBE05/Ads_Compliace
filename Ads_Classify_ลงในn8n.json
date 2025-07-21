@@ -1,0 +1,1223 @@
+{
+  "name": "Ads Classify",
+  "nodes": [
+    {
+      "parameters": {
+        "modelName": "models/gemma-3-12b-it",
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        3840,
+        660
+      ],
+      "id": "146ccac6-48f9-4f8c-aacb-dfadf495b201",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "lylnqzNYVpLVr4SJ",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \"File_Name\",\"ocr_text\", \"Context_Text\",\"Final_Result\",\"Reason&Suggestion\"\nFROM ocr_result;\n",
+        "additionalFields": {}
+      },
+      "name": "Run Query",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        5040,
+        340
+      ],
+      "typeVersion": 1,
+      "id": "fa786d7d-592c-4ff9-8dba-856dc9a9dea0",
+      "credentials": {
+        "postgres": {
+          "id": "e0gslUVteeKoRrF3",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "toFile",
+        "fileFormat": "xlsx",
+        "options": {}
+      },
+      "name": "Spreadsheet File",
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "position": [
+        5260,
+        340
+      ],
+      "typeVersion": 1,
+      "id": "ad3b34f2-6857-4e39-8dd1-93b553d3c76c"
+    },
+    {
+      "parameters": {
+        "fileName": "Result.xls",
+        "options": {}
+      },
+      "name": "Write Binary File",
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "position": [
+        5480,
+        340
+      ],
+      "typeVersion": 1,
+      "id": "7e487ad8-91b8-4c00-9f96-693d8398feb6"
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8119/list-folder",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"filename\":\"{{ $json }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        100
+      ],
+      "id": "1984209b-00dd-4d6a-912b-1666bb30af8c",
+      "name": "List file name1",
+      "notesInFlow": true,
+      "notes": "File name from path"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fa601bc5-7839-428e-9623-b78548711c68",
+              "name": "files",
+              "value": "={{ $json.files }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        700,
+        100
+      ],
+      "id": "f8ff7b1a-2fc1-4be2-8efc-9bc5f2dafda7",
+      "name": "Transform into array1"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $json.files.map(file => {\n  return { json: { File_Name: file } };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        100
+      ],
+      "id": "178d6007-a8bf-45fa-8a9f-c6d788641069",
+      "name": "Make it Json1",
+      "notesInFlow": true,
+      "notes": "for repeating by each file"
+    },
+    {
+      "parameters": {
+        "batchSize": "={{ 1 }}",
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1200,
+        100
+      ],
+      "id": "e592ffd9-7f6c-48ec-bb99-cae01dfbab76",
+      "name": "Ocr one by one1",
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "ocr_result",
+          "mode": "list",
+          "cachedResultName": "ocr_result"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "File_Name": "={{ $json.File_Name }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "ocr_text",
+              "displayName": "ocr_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "File_Name",
+              "displayName": "File_Name",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Context_Text",
+              "displayName": "Context_Text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Final_Result",
+              "displayName": "Final_Result",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Reasons",
+              "displayName": "Reasons",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1800,
+        100
+      ],
+      "id": "91fd022e-2cae-4e8a-b545-e0c84471f6ac",
+      "name": "Store file name1",
+      "credentials": {
+        "postgres": {
+          "id": "e0gslUVteeKoRrF3",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://host.docker.internal:8119/ocr-single-file?filename={{ $json.File_Name }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2320,
+        100
+      ],
+      "id": "b3e26758-3965-4ba1-b2b3-c0a8f8c7b542",
+      "name": "Ocr by file name1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "Describe only the visual content of this image from a financial advertising regulation standpoint.\n\nDo not include any introduction or summary. Just give a brief but focused summary of the photo's **visual context only** (ignore any text in the image).\n\nList only relevant findings in bullet points related to:\n\n- Presence of stacks of money, gold bars, or symbols of wealth (mention count if possible).\n- People holding, throwing, or displaying money in a way that implies quick wealth or effortless gain.\n- Visuals that suggest fast loan approval, no collateral, or 0% interest without supporting context.\n- Tone of the image: luxury, financial success, urgency, or emotional pressure.\n- Any elements that might encourage irresponsible borrowing, create unrealistic financial expectations, or visually pressure consumers to take on debt.\n\nReturn findings as **short bullet points** only. Keep objective, specific, and concise.\n",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        1820,
+        660
+      ],
+      "id": "f795a114-79ff-4ea4-a2d9-638204262b82",
+      "name": "AI Agent2",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash",
+        "options": {
+          "maxOutputTokens": 500,
+          "temperature": 0.3
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1820,
+        860
+      ],
+      "id": "83da11da-bb0b-4dee-a376-fddb68d6ec8c",
+      "name": "Google Gemini Chat Model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "lylnqzNYVpLVr4SJ",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=http://host.docker.internal:8119/file?filename={{ $json.File_Name }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        480
+      ],
+      "id": "6b5be79f-86b2-4809-ba5e-64ccc3ab6a69",
+      "name": "Filename to Pic1"
+    },
+    {
+      "parameters": {
+        "batchSize": "={{ 1 }}",
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1020,
+        460
+      ],
+      "id": "4d7eb713-91d4-4d43-802c-7c6356fd2b9e",
+      "name": "Loop one by one",
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fa601bc5-7839-428e-9623-b78548711c68",
+              "name": "files",
+              "value": "={{ $json.File_Name }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1940,
+        380
+      ],
+      "id": "730c9a19-72fc-4553-9f77-871fd5ce233d",
+      "name": "Pull file name"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2260,
+        460
+      ],
+      "id": "855cdbdd-a37c-4a6b-a359-baa1c96c841c",
+      "name": "File name + Result"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d5a5e98d-814f-41fe-b3a2-d50b76c795d2",
+              "name": "File_Name",
+              "value": "={{ $json.filename }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "include": "selected",
+        "includeFields": "text",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2660,
+        140
+      ],
+      "id": "cd16852d-98f3-454b-8ff0-09eaf0a837b6",
+      "name": "Change to same name"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dba2d282-3e7b-4bd8-8203-d9a50f827ac8",
+              "name": "File_Name",
+              "value": "={{ $json.files }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "include": "selected",
+        "includeFields": "output",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2580,
+        460
+      ],
+      "id": "1565cbad-3dd2-4bfc-b7e9-fa414347efc1",
+      "name": "Change to same name1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "advanced": true,
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "File_Name",
+              "field2": "File_Name"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2860,
+        260
+      ],
+      "id": "5b17085a-2503-4296-9818-2e9a67efa576",
+      "name": "Combine both result"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "ocr_result",
+          "mode": "list",
+          "cachedResultName": "ocr_result"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ocr_text": "={{ $json.text }}",
+            "File_Name": "={{ $json.File_Name }}",
+            "Context_Text": "={{ $json.output }}"
+          },
+          "matchingColumns": [
+            "File_Name"
+          ],
+          "schema": [
+            {
+              "id": "ocr_text",
+              "displayName": "ocr_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "File_Name",
+              "displayName": "File_Name",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Context_Text",
+              "displayName": "Context_Text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3380,
+        260
+      ],
+      "id": "8cc7d3a4-553a-4c34-b4fc-2aa053031726",
+      "name": "Pre-Result",
+      "credentials": {
+        "postgres": {
+          "id": "e0gslUVteeKoRrF3",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fa601bc5-7839-428e-9623-b78548711c68",
+              "name": "File_Name",
+              "value": "={{ $json.File_Name }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3980,
+        200
+      ],
+      "id": "cf64137c-1048-43d7-a85e-b0d77bf3f299",
+      "name": "Pull file name1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        4480,
+        320
+      ],
+      "id": "35472ef5-0dca-41ab-afce-66ca1051c775",
+      "name": "Merge AI result"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "ocr_result",
+          "mode": "list",
+          "cachedResultName": "ocr_result"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "File_Name": "={{ $json.File_Name }}",
+            "Final_Result": "={{ $json.result }}",
+            "Reason&Suggestion": "={{ $json.reason }}"
+          },
+          "matchingColumns": [
+            "File_Name"
+          ],
+          "schema": [
+            {
+              "id": "ocr_text",
+              "displayName": "ocr_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "File_Name",
+              "displayName": "File_Name",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Context_Text",
+              "displayName": "Context_Text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "Final_Result",
+              "displayName": "Final_Result",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "Reason&Suggestion",
+              "displayName": "Reason&Suggestion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4780,
+        340
+      ],
+      "id": "768ea60f-1a4c-4a3b-a797-af4a1a95688c",
+      "name": "Post-Result",
+      "credentials": {
+        "postgres": {
+          "id": "e0gslUVteeKoRrF3",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2020,
+        100
+      ],
+      "id": "18bacf2f-6429-44e6-b573-1f9641f25811",
+      "name": "Wait",
+      "webhookId": "00612a28-1862-4d52-9db7-67f9dced9b68"
+    },
+    {
+      "parameters": {
+        "amount": 8
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1560,
+        600
+      ],
+      "id": "fb6e3663-14d5-47e3-8051-404b88f7434b",
+      "name": "Wait1",
+      "webhookId": "d04e573d-05b1-43d2-8561-8e17a5c98096"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3600,
+        400
+      ],
+      "id": "3882c226-cf96-43d9-9cf0-2a640abf995e",
+      "name": "Wait2",
+      "webhookId": "5eda1581-660d-4578-9dec-3c04e370df83"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are reviewing a bank loan advertisement for compliance with Thai central bank (BOT) advertising regulations.\n\nYou are given:\n- OCR-extracted text from the ad: {{ $json.ocr_text }}\n- A description of the visual context of the ad: {{ $json.Context_Text }}\n\n---\n\nFirst, review the visual context (ignore text in image) and provide brief observations based on:\n\n- Presence of stacks of money, gold bars, or symbols of wealth (mention count if possible)\n- People holding, throwing, or showing off money\n- Visuals suggesting fast approval, no interest, no collateral, or easy loan terms\n- Tone of the ad (luxury, urgency, excessive success, or emotional pressure)\n- Any imagery that could promote over-indebtedness or unrealistic expectation\n---\n\nThen, evaluate whether the advertisement complies with the following BOT rules(chceck Both {{ $json.ocr_text }} & {{ $json.Context_Text }}):\n\n1. **Interest Rate Clarity**  \n- Are promotional interest rates (e.g. 0%) clearly shown with terms and limitations?  \n- Are step-up/floating rates fully disclosed with range, assumptions, and warnings?\n\n2. **Effective Interest Rate for Comparison**  \n- Does the ad show the full range of effective annual interest (e.g., 10%-25%)?  \n- If floating: does it state (1) reference rate, (2) assumption date, and (3) the phrase “อัตราดอกเบี้ยลอยตัวสามารถเปลี่ยนแปลงเพิ่มขึ้นหรือลดลงได้”?\n\n3. **Monthly Payment Claims**  \n- If monthly payments are advertised, are the assumptions clear? (principal, interest, term, repayment period, etc.)\n\n4. **Warning Messages**  \n- Is the phrase “กู้เท่าที่จำเป็นและชำระคืนไหว” visible and readable?  \n- If it’s a credit card or 0% ad: does it include the appropriate BOT-specified disclaimer?\n\n5. **No Misleading Claims**  \n- Ensure the ad does not suggest \"free\" loans or no interest without conditions.\n\n6. **Overall Integrity**  \n- The ad must not omit key terms, overpromise results, or encourage irresponsible borrowing.\n\n---\n\n**Give answer in Thai and use the statement format not the bullet point Respond strictly in this JSON format below:**\n```json\n{\n  \"result\": \"Approved\"or\"Denied\",\n  \"visual_flags\"(in case you found ads against the rule): [\n    \"- ไม่มีภาพกองเงินหรือสัญลักษณ์ของความร่ำรวย\",\n    \"- ไม่มีภาพหรือท่าทางที่แสดงถึงความมั่งคั่งทันที\"\n  ],\n  \"reason\"(use this when ads follow the rules): [\n    \"✅ แสดงช่วงอัตราดอกเบี้ยที่แท้จริงครบถ้วน\",\n    \"✅ มีคำเตือนตามข้อกำหนดของ BOT อย่างชัดเจน\"\n  ]\n}\nAnd lastly,dont use emoji,if nessessary to indicate the confirmation,just use it at the start of message only\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        3820,
+        400
+      ],
+      "id": "2102b4d3-b534-4921-9841-c2d7ea4218bf",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json.output;\n\n// หาตำแหน่งของ \"result\" และ \"reason\"\nconst match = raw.match(/\"result\"\\s*:\\s*\"([^\"]+)\"[\\s\\S]*?\"reason\"\\s*:\\s*\\[([\\s\\S]*?)\\]/);\n\nif (match) {\n  const result = match[1];\n  const reasonArray = match[2]\n    .split(/[\"“”]+,[\\s\\n]*[\"“”]+|[\"“”]+[\\s\\n]*[\"“”]+/)\n    .map(item => item.replace(/[\"“”]/g, \"\").trim())\n    .filter(Boolean);\n\n  const reasonText = reasonArray.join('\\n');\n\n  return {\n    result,\n    reason: reasonText\n  };\n}\n\nthrow new Error(\"Output format does not match\");\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4180,
+        400
+      ],
+      "id": "7c5927cb-3521-44d1-9308-f16c06991298",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "content": "## ขั้นที่ 1 ดึงรูปมาจาก File path ที่กำหนดในเครื่อง(แก้ได้ในโค้ด)",
+        "height": 340,
+        "width": 1260,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        140,
+        -20
+      ],
+      "typeVersion": 1,
+      "id": "66b9798a-d9e5-4e11-96f6-4dbc1ca7f509",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## ขั้นที่ 2 รับรูปมาให้AIบรรยายบริบทภายในภาพ\n*ใส่โหนดdelayเพื่อให้ข้อมูลไม่ส่งไปหาตัวโมเดลบ่อยเกินและล่ม*",
+        "height": 540,
+        "width": 1620,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        920,
+        320
+      ],
+      "typeVersion": 1,
+      "id": "57c41bfc-879b-4583-ad89-c4da377da5a1",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## ขั้นที่ 3 นำผลทั้งหมดมาเทียบกับกฎ BOT\nให้ข้อมูลกฎ BOT ให้กับโมเดล แล้วให้ตัดสินใจว่า ละเมิดกฎหรือไม่ โดยเช็คทั้งด้าน OCR และบริบทรูป",
+        "height": 880,
+        "width": 1400,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3220,
+        -40
+      ],
+      "typeVersion": 1,
+      "id": "aa8259ca-ae7f-4614-a37c-0031a70dacf8",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## ขั้นที่ 4 รวมผลและส่งออกเป็นไฟล์เอ็กซ์เซล\nดาวน์โหลดได้ในโหนดสุดท้าย",
+        "height": 360,
+        "width": 920
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        4760,
+        180
+      ],
+      "typeVersion": 1,
+      "id": "e308b10c-a863-4c39-af39-7057370e98a1",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months",
+              "triggerAtDayOfMonth": 15
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        180,
+        180
+      ],
+      "id": "f7bbce86-2847-443f-89e9-d45b67001b22",
+      "name": "ทำงานตามเวลา",
+      "notes": "ตั้งเวลาไว้ วันที่ 15 ของทุกเดือนตอนเที่ยงคืน"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        180,
+        40
+      ],
+      "id": "3196ff4a-4cb1-4953-b8ab-e5600df6c2d1",
+      "name": "เริ่มเมื่อคลิ๊ก"
+    },
+    {
+      "parameters": {
+        "content": "## ขั้นที่ 2 รับรูปมาทำ OCR และอัพโหลดกลับไปที่ Database\nอัพชื่อไฟล์เข้า DB และส่งชื่อไฟล์ไปทำ OCR\n*ใส่โหนด delay เพื่อให้ข้อมูลไม่ส่งไปหาตัวโมเดลบ่อยเกินและล่ม*",
+        "height": 320,
+        "width": 800,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1740,
+        -20
+      ],
+      "typeVersion": 1,
+      "id": "9f9f9c2e-da63-4531-b998-62e2bd312324",
+      "name": "Sticky Note4"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Query": {
+      "main": [
+        [
+          {
+            "node": "Spreadsheet File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Spreadsheet File": {
+      "main": [
+        [
+          {
+            "node": "Write Binary File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List file name1": {
+      "main": [
+        [
+          {
+            "node": "Transform into array1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transform into array1": {
+      "main": [
+        [
+          {
+            "node": "Make it Json1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Make it Json1": {
+      "main": [
+        [
+          {
+            "node": "Ocr one by one1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Loop one by one",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ocr one by one1": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Store file name1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store file name1": {
+      "main": [
+        [
+          {
+            "node": "Ocr one by one1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filename to Pic1": {
+      "main": [
+        [
+          {
+            "node": "Pull file name",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ocr by file name1": {
+      "main": [
+        [
+          {
+            "node": "Change to same name",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent2": {
+      "main": [
+        [
+          {
+            "node": "File name + Result",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Loop one by one": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Filename to Pic1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pull file name": {
+      "main": [
+        [
+          {
+            "node": "File name + Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "File name + Result": {
+      "main": [
+        [
+          {
+            "node": "Loop one by one",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Change to same name1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Change to same name": {
+      "main": [
+        [
+          {
+            "node": "Combine both result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Change to same name1": {
+      "main": [
+        [
+          {
+            "node": "Combine both result",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Combine both result": {
+      "main": [
+        [
+          {
+            "node": "Pre-Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pre-Result": {
+      "main": [
+        [
+          {
+            "node": "Pull file name1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Wait2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pull file name1": {
+      "main": [
+        [
+          {
+            "node": "Merge AI result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge AI result": {
+      "main": [
+        [
+          {
+            "node": "Post-Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post-Result": {
+      "main": [
+        [
+          {
+            "node": "Run Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Ocr by file name1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait2": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Merge AI result",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "ทำงานตามเวลา": {
+      "main": [
+        [
+          {
+            "node": "List file name1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "เริ่มเมื่อคลิ๊ก": {
+      "main": [
+        [
+          {
+            "node": "List file name1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Binary File": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "442748ca-f1f3-4890-b15c-77120f8ad847",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "bd5235ddcb688b50c51601780b7b393286f2cd5e54dae1a447476fb3bf4b3000"
+  },
+  "id": "SBWpokJ9dcex8hU3",
+  "tags": []
+}
